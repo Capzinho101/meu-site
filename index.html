@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Controle de Gastos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-6">
+  <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-2xl shadow-lg">
+    <h1 class="text-2xl font-bold mb-4">💰 Controle de Gastos</h1>
+
+    <!-- ADICIONAR TRANSAÇÃO -->
+    <div class="mb-4">
+      <input id="desc" type="text" placeholder="Descrição" class="bg-gray-700 border border-gray-600 p-2 w-full mb-2 rounded text-white">
+      
+      <select id="category" class="bg-gray-700 border border-gray-600 p-2 w-full mb-2 rounded text-white">
+        <option value="Alimentação">🍔 Alimentação</option>
+        <option value="Transporte">🚗 Transporte</option>
+        <option value="Contas">🏠 Contas</option>
+        <option value="Lazer">🎮 Lazer</option>
+        <option value="Outros">📦 Outros</option>
+      </select>
+
+      <input id="value" type="number" placeholder="Valor (use negativo para gastos)" class="bg-gray-700 border border-gray-600 p-2 w-full mb-2 rounded text-white">
+      <button onclick="addTransaction()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Adicionar</button>
+    </div>
+
+    <!-- DÍVIDAS -->
+    <div class="mb-4">
+      <input id="debt" type="number" placeholder="Total das dívidas" class="bg-gray-700 border border-gray-600 p-2 w-full mb-2 rounded text-white">
+      <button onclick="setDebt()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded w-full">Definir Dívida</button>
+    </div>
+
+    <!-- RESUMO -->
+    <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+      <div class="bg-green-900 p-3 rounded">
+        <p>💵 Total que tenho</p>
+        <strong>R$ <span id="income">0</span></strong>
+      </div>
+
+      <div class="bg-red-900 p-3 rounded">
+        <p>💸 Total gasto</p>
+        <strong>R$ <span id="expenses">0</span></strong>
+      </div>
+
+      <div class="bg-blue-900 p-3 rounded">
+        <p>📊 Saldo atual</p>
+        <strong>R$ <span id="balance">0</span></strong>
+      </div>
+
+      <div class="bg-yellow-700 p-3 rounded text-black">
+        <p>⚠️ Falta p/ quitar dívidas</p>
+        <strong>R$ <span id="remaining">0</span></strong>
+      </div>
+    </div>
+
+    <!-- GASTOS POR CATEGORIA -->
+    <div class="mb-4">
+      <h2 class="font-semibold mb-2">📊 Gastos por categoria</h2>
+      <ul id="categories" class="space-y-1 text-sm"></ul>
+    </div>
+
+    <ul id="list" class="mt-4 space-y-2"></ul>
+  </div>
+
+  <script>
+    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+    let debt = parseFloat(localStorage.getItem('debt')) || 0;
+
+    function updateUI() {
+      const list = document.getElementById('list');
+      const balance = document.getElementById('balance');
+      const incomeEl = document.getElementById('income');
+      const expensesEl = document.getElementById('expenses');
+      const remainingEl = document.getElementById('remaining');
+      const categoriesEl = document.getElementById('categories');
+
+      list.innerHTML = '';
+      categoriesEl.innerHTML = '';
+
+      let total = 0;
+      let income = 0;
+      let expenses = 0;
+      let categoryTotals = {};
+
+      transactions.forEach((t, index) => {
+        total += t.value;
+
+        if (t.value > 0) {
+          income += t.value;
+        } else {
+          expenses += t.value;
+
+          if (!categoryTotals[t.category]) {
+            categoryTotals[t.category] = 0;
+          }
+          categoryTotals[t.category] += t.value;
+        }
+
+        const li = document.createElement('li');
+        li.className = 'flex justify-between bg-gray-700 p-2 rounded';
+        li.innerHTML = `
+          <span>${t.desc} (${t.category})</span>
+          <span>R$ ${t.value.toFixed(2)}</span>
+          <button onclick="removeTransaction(${index})" class="text-red-400">X</button>
+        `;
+        list.appendChild(li);
+      });
+
+      for (let cat in categoryTotals) {
+        const li = document.createElement('li');
+        li.className = 'flex justify-between bg-gray-600 p-2 rounded';
+        li.innerHTML = `<span>${cat}</span><span>R$ ${Math.abs(categoryTotals[cat]).toFixed(2)}</span>`;
+        categoriesEl.appendChild(li);
+      }
+
+      const remaining = debt - total;
+
+      balance.innerText = total.toFixed(2);
+      incomeEl.innerText = income.toFixed(2);
+      expensesEl.innerText = Math.abs(expenses).toFixed(2);
+      remainingEl.innerText = remaining > 0 ? remaining.toFixed(2) : '0.00';
+
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+      localStorage.setItem('debt', debt);
+    }
+
+    function addTransaction() {
+      const desc = document.getElementById('desc').value;
+      const value = parseFloat(document.getElementById('value').value);
+      const category = document.getElementById('category').value;
+
+      if (!desc || isNaN(value)) {
+        alert('Preencha tudo corretamente');
+        return;
+      }
+
+      transactions.push({ desc, value, category });
+      document.getElementById('desc').value = '';
+      document.getElementById('value').value = '';
+
+      updateUI();
+    }
+
+    function removeTransaction(index) {
+      transactions.splice(index, 1);
+      updateUI();
+    }
+
+    function setDebt() {
+      const debtInput = document.getElementById('debt').value;
+      debt = parseFloat(debtInput) || 0;
+      updateUI();
+    }
+
+    updateUI();
+  </script>
+</body>
+</html>
