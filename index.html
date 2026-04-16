@@ -133,6 +133,16 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+  auth.getRedirectResult()
+.then((result) => {
+  if (result.user) {
+    document.getElementById('userEmail').innerText =
+      result.user.email;
+  }
+})
+.catch((error) => {
+  console.log("Login error:", error);
+});
 
 // ---------------- DADOS ----------------
 let transactions = {};
@@ -142,12 +152,7 @@ let initialBalance = 0;
 // ---------------- LOGIN ----------------
 function login(){
   const provider = new firebase.auth.GoogleAuthProvider();
-
-  auth.signInWithPopup(provider)
-  .then(res => {
-    document.getElementById('userEmail').innerText =
-      res.user.email;
-  });
+  auth.signInWithRedirect(provider);
 }
 
 function logout(){
