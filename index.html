@@ -123,14 +123,14 @@ Adicionar
 
 // ---------------- FIREBASE ----------------
 const firebaseConfig = {
-  apiKey: "AIzaSyDeXJ_uSeaLgPKRUA1nCV7UFwEzpmiOmHc",
-  authDomain: "meu-controle-financeiro-a0572.firebaseapp.com",
-  projectId: "meu-controle-financeiro-a0572",
-  storageBucket: "meu-controle-financeiro-a0572.firebasestorage.app",
-  messagingSenderId: "202199536593",
-  appId: "1:202199536593:web:be012b0bd8c44b8c86c6f0"
+  apiKey: "AIzaSyC8Uz0IBqtqrmfTtECv3gr5rqbIWY4gIF0",
+  authDomain: "meu-consumo-financeiro.firebaseapp.com",
+  projectId: "meu-consumo-financeiro",
+  storageBucket: "meu-consumo-financeiro.firebasestorage.app",
+  messagingSenderId: "725415055361",
+  appId: "1:725415055361:web:116b201e1be0fcd5117000",
+  measurementId: "G-0N0XKJCS18"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
@@ -282,7 +282,15 @@ function render(){
       debtLeft += Math.abs(t.value);
     }
 
-    let status = t.paid ? "PAGO" : "";
+  let status = "";
+
+if (t.value < 0 && !t.paid) {
+  status = "PENDENTE";
+}
+
+if (t.paid) {
+  status = "PAGO";
+}
 
     list.innerHTML += `
       <div class="bg-gray-800 p-2 rounded flex justify-between">
