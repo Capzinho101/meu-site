@@ -136,11 +136,14 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 
-// ✔ CORREÇÃO AQUI (SEM .then ERRADO)
+// 🔥 login persistente
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
+// ---------------- LOGIN UI (CORRIGIDO) ----------------
 auth.onAuthStateChanged((user) => {
   const box = document.getElementById("userEmail");
+
+  if (!box) return;
 
   if (user) {
     box.innerText = "Logado: " + user.email;
