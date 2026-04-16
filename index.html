@@ -1,159 +1,321 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Controle de Gastos</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<title>Finance Pro Final</title>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 </head>
-<body class="bg-gray-900 text-white p-6">
-  <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-2xl shadow-lg">
-    <h1 class="text-2xl font-bold mb-4">💰 Controle de Gastos</h1>
 
-    <!-- ADICIONAR TRANSAÇÃO -->
-    <div class="mb-4">
-      <input id="desc" type="text" placeholder="Descrição" class="bg-gray-700 border border-gray-600 p-2 w-full mb-2 rounded text-white">
-      
-      <select id="category" class="bg-gray-700 border border-gray-600 p-2 w-full mb-2 rounded text-white">
-        <option value="Alimentação">🍔 Alimentação</option>
-        <option value="Transporte">🚗 Transporte</option>
-        <option value="Contas">🏠 Contas</option>
-        <option value="Lazer">🎮 Lazer</option>
-        <option value="Outros">📦 Outros</option>
-      </select>
+<body class="bg-gray-900 text-white">
 
-      <input id="value" type="number" placeholder="Valor (use negativo para gastos)" class="bg-gray-700 border border-gray-600 p-2 w-full mb-2 rounded text-white">
-      <button onclick="addTransaction()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Adicionar</button>
-    </div>
+<!-- BOTÃO MENU -->
+<button onclick="toggleSidebar()"
+class="fixed top-3 left-3 bg-gray-800 px-3 py-2 rounded z-50">
+☰
+</button>
 
-    <!-- DÍVIDAS -->
-    <div class="mb-4">
-      <input id="debt" type="number" placeholder="Total das dívidas" class="bg-gray-700 border border-gray-600 p-2 w-full mb-2 rounded text-white">
-      <button onclick="setDebt()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded w-full">Definir Dívida</button>
-    </div>
+<!-- SIDEBAR -->
+<div id="sidebar"
+class="fixed top-0 left-0 w-80 h-full bg-gray-950 p-4 transform -translate-x-full transition z-40 overflow-y-auto">
 
-    <!-- RESUMO -->
-    <div class="grid grid-cols-2 gap-4 text-sm mb-4">
-      <div class="bg-green-900 p-3 rounded">
-        <p>💵 Total que tenho</p>
-        <strong>R$ <span id="income">0</span></strong>
-      </div>
+<h2 class="font-bold mb-4">⚙ Painel</h2>
 
-      <div class="bg-red-900 p-3 rounded">
-        <p>💸 Total gasto</p>
-        <strong>R$ <span id="expenses">0</span></strong>
-      </div>
+<!-- LOGIN -->
+<div class="bg-gray-900 p-3 rounded mb-4">
+  <p class="text-sm mb-2">👤 Conta</p>
 
-      <div class="bg-blue-900 p-3 rounded">
-        <p>📊 Saldo atual</p>
-        <strong>R$ <span id="balance">0</span></strong>
-      </div>
+  <button onclick="login()"
+  class="bg-green-600 w-full p-2 rounded mb-2">
+    Login Google
+  </button>
 
-      <div class="bg-yellow-700 p-3 rounded text-black">
-        <p>⚠️ Falta p/ quitar dívidas</p>
-        <strong>R$ <span id="remaining">0</span></strong>
-      </div>
-    </div>
+  <button onclick="logout()"
+  class="bg-red-600 w-full p-2 rounded">
+    Sair
+  </button>
 
-    <!-- GASTOS POR CATEGORIA -->
-    <div class="mb-4">
-      <h2 class="font-semibold mb-2">📊 Gastos por categoria</h2>
-      <ul id="categories" class="space-y-1 text-sm"></ul>
-    </div>
+  <p id="userEmail" class="text-xs mt-2"></p>
+</div>
 
-    <ul id="list" class="mt-4 space-y-2"></ul>
-  </div>
+<!-- SALDO INICIAL -->
+<div class="mb-4">
+<p class="text-sm">💰 Saldo inicial</p>
+<input id="initialBalance"
+type="number"
+class="bg-gray-800 p-2 w-full rounded">
+<button onclick="setInitial()"
+class="bg-green-600 w-full p-2 rounded mt-2">
+Salvar
+</button>
+</div>
 
-  <script>
-    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-    let debt = parseFloat(localStorage.getItem('debt')) || 0;
+<!-- MÊS -->
+<div class="mb-4">
+<p class="text-sm">📅 Mês</p>
+<select id="monthSelect"
+class="bg-gray-800 p-2 w-full rounded"
+onchange="changeMonth()"></select>
+</div>
 
-    function updateUI() {
-      const list = document.getElementById('list');
-      const balance = document.getElementById('balance');
-      const incomeEl = document.getElementById('income');
-      const expensesEl = document.getElementById('expenses');
-      const remainingEl = document.getElementById('remaining');
-      const categoriesEl = document.getElementById('categories');
+<!-- DÍVIDA -->
+<div class="bg-gray-900 p-3 rounded mb-4">
+<p class="text-sm">💸 Dívida restante</p>
+<p class="text-red-400 text-lg">R$ <span id="debtLeft">0</span></p>
+</div>
 
-      list.innerHTML = '';
-      categoriesEl.innerHTML = '';
+<!-- HISTÓRICO -->
+<div>
+<h3 class="font-bold mb-2">📊 Histórico geral</h3>
+<div id="historySidebar" class="space-y-2 text-sm"></div>
+</div>
 
-      let total = 0;
-      let income = 0;
-      let expenses = 0;
-      let categoryTotals = {};
+</div>
 
-      transactions.forEach((t, index) => {
-        total += t.value;
+<!-- MAIN -->
+<div class="ml-10 p-4">
 
-        if (t.value > 0) {
-          income += t.value;
-        } else {
-          expenses += t.value;
+<h1 class="text-xl font-bold mb-4">💰 Controle Financeiro</h1>
 
-          if (!categoryTotals[t.category]) {
-            categoryTotals[t.category] = 0;
-          }
-          categoryTotals[t.category] += t.value;
-        }
+<div id="balanceBox" class="p-3 rounded bg-gray-700 mb-4">
+Saldo: R$ <span id="balance">0</span>
+</div>
 
-        const li = document.createElement('li');
-        li.className = 'flex justify-between bg-gray-700 p-2 rounded';
-        li.innerHTML = `
-          <span>${t.desc} (${t.category})</span>
-          <span>R$ ${t.value.toFixed(2)}</span>
-          <button onclick="removeTransaction(${index})" class="text-red-400">X</button>
-        `;
-        list.appendChild(li);
-      });
+<div class="grid grid-cols-3 gap-2 mb-4">
+<div class="bg-green-900 p-3 rounded">Entradas <p id="income">0</p></div>
+<div class="bg-red-900 p-3 rounded">Gastos <p id="expenses">0</p></div>
+<div class="bg-blue-900 p-3 rounded">Total <p id="total">0</p></div>
+</div>
 
-      for (let cat in categoryTotals) {
-        const li = document.createElement('li');
-        li.className = 'flex justify-between bg-gray-600 p-2 rounded';
-        li.innerHTML = `<span>${cat}</span><span>R$ ${Math.abs(categoryTotals[cat]).toFixed(2)}</span>`;
-        categoriesEl.appendChild(li);
-      }
+<!-- ADD -->
+<div class="bg-gray-800 p-3 rounded mb-4">
 
-      const remaining = debt - total;
+<input id="desc" class="bg-gray-700 p-2 w-full rounded mb-2" placeholder="Descrição">
 
-      balance.innerText = total.toFixed(2);
-      incomeEl.innerText = income.toFixed(2);
-      expensesEl.innerText = Math.abs(expenses).toFixed(2);
-      remainingEl.innerText = remaining > 0 ? remaining.toFixed(2) : '0.00';
+<select id="category" class="bg-gray-700 p-2 w-full rounded mb-2">
+<option>Água</option>
+<option>Transporte</option>
+<option>Contas</option>
+<option>Alimentação</option>
+<option>Outros</option>
+</select>
 
-      localStorage.setItem('transactions', JSON.stringify(transactions));
-      localStorage.setItem('debt', debt);
+<input id="value" type="number"
+class="bg-gray-700 p-2 w-full rounded mb-2"
+placeholder="Valor (negativo = gasto)">
+
+<button onclick="add()"
+class="bg-blue-600 w-full p-2 rounded">
+Adicionar
+</button>
+
+</div>
+
+<h2 class="font-bold mb-2">📌 Lista</h2>
+<div id="list" class="space-y-2"></div>
+
+</div>
+
+<script>
+
+// ---------------- FIREBASE ----------------
+const firebaseConfig = {
+  apiKey: "AIzaSyDeXJ_uSeaLgPKRUA1nCV7UFwEzpmiOmHc",
+  authDomain: "meu-controle-financeiro-a0572.firebaseapp.com",
+  projectId: "meu-controle-financeiro-a0572",
+  storageBucket: "meu-controle-financeiro-a0572.firebasestorage.app",
+  messagingSenderId: "202199536593",
+  appId: "1:202199536593:web:be012b0bd8c44b8c86c6f0"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// ---------------- DADOS ----------------
+let transactions = {};
+let currentMonth = getMonthKey();
+let initialBalance = 0;
+
+// ---------------- LOGIN ----------------
+function login(){
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  auth.signInWithPopup(provider)
+  .then(res => {
+    document.getElementById('userEmail').innerText =
+      res.user.email;
+  });
+}
+
+function logout(){
+  auth.signOut();
+  document.getElementById('userEmail').innerText = '';
+}
+
+// ---------------- MÊS ----------------
+function getMonthKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}`;
+}
+
+// ---------------- SIDEBAR ----------------
+function toggleSidebar(){
+  document.getElementById('sidebar')
+  .classList.toggle('-translate-x-full');
+}
+
+// ---------------- INIT MESES ----------------
+function initMonths(){
+  const select = document.getElementById('monthSelect');
+
+  const year = new Date().getFullYear();
+
+  for(let i=1;i<=12;i++){
+    const opt = document.createElement('option');
+    opt.value = `${year}-${i}`;
+    opt.innerText = `${year}-${i}`;
+    select.appendChild(opt);
+  }
+
+  select.value = currentMonth;
+}
+
+// ---------------- CHANGE MONTH ----------------
+function changeMonth(){
+  currentMonth = document.getElementById('monthSelect').value;
+  load();
+  render();
+}
+
+// ---------------- ADD ----------------
+function add(){
+
+  const desc = document.getElementById('desc').value;
+  const value = parseFloat(document.getElementById('value').value);
+  const category = document.getElementById('category').value;
+
+  if(!desc || isNaN(value)) return;
+
+  if(!transactions[currentMonth]) transactions[currentMonth] = [];
+
+  transactions[currentMonth].push({
+    id: Date.now(),
+    desc,
+    value,
+    category,
+    paid: false
+  });
+
+  save();
+  render();
+}
+
+// ---------------- TOGGLE PAGO ----------------
+function togglePaid(id){
+
+  const t = transactions[currentMonth].find(x => x.id === id);
+  t.paid = !t.paid;
+
+  save();
+  render();
+}
+
+// ---------------- DELETE ----------------
+function del(id){
+  transactions[currentMonth] =
+    transactions[currentMonth].filter(t => t.id !== id);
+
+  save();
+  render();
+}
+
+// ---------------- SAVE ----------------
+function save(){
+  localStorage.setItem("financeAppFinal", JSON.stringify({
+    transactions,
+    initialBalance
+  }));
+}
+
+// ---------------- LOAD ----------------
+function load(){
+  const data = JSON.parse(localStorage.getItem("financeAppFinal"));
+  if(data){
+    transactions = data.transactions || {};
+    initialBalance = data.initialBalance || 0;
+  }
+}
+
+// ---------------- SALDO ----------------
+function setInitial(){
+  initialBalance =
+    parseFloat(document.getElementById('initialBalance').value) || 0;
+
+  save();
+  render();
+}
+
+// ---------------- RENDER ----------------
+function render(){
+
+  const list = document.getElementById('list');
+  const history = document.getElementById('historySidebar');
+
+  list.innerHTML = '';
+  history.innerHTML = '';
+
+  let income = 0;
+  let expenses = 0;
+  let debtLeft = 0;
+
+  const monthData = transactions[currentMonth] || [];
+
+  monthData.forEach(t => {
+
+    if(t.value > 0) income += t.value;
+    else expenses += t.value;
+
+    if(t.value < 0 && !t.paid){
+      debtLeft += Math.abs(t.value);
     }
 
-    function addTransaction() {
-      const desc = document.getElementById('desc').value;
-      const value = parseFloat(document.getElementById('value').value);
-      const category = document.getElementById('category').value;
+    let status = t.paid ? "PAGO" : "";
 
-      if (!desc || isNaN(value)) {
-        alert('Preencha tudo corretamente');
-        return;
-      }
+    list.innerHTML += `
+      <div class="bg-gray-800 p-2 rounded flex justify-between">
 
-      transactions.push({ desc, value, category });
-      document.getElementById('desc').value = '';
-      document.getElementById('value').value = '';
+        <div>
+          ${t.desc} (${t.category}) - R$ ${t.value}
+          <span class="${t.paid ? 'text-green-400' : ''}">
+            ${status}
+          </span>
+        </div>
 
-      updateUI();
-    }
+        <div class="flex gap-2">
+          <button onclick="togglePaid(${t.id})">✔</button>
+          <button onclick="del(${t.id})">❌</button>
+        </div>
 
-    function removeTransaction(index) {
-      transactions.splice(index, 1);
-      updateUI();
-    }
+      </div>
+    `;
+  });
 
-    function setDebt() {
-      const debtInput = document.getElementById('debt').value;
-      debt = parseFloat(debtInput) || 0;
-      updateUI();
-    }
+  document.getElementById('income').innerText = income;
+  document.getElementById('expenses').innerText = Math.abs(expenses);
+  document.getElementById('total').innerText = income + expenses;
+  document.getElementById('balance').innerText = initialBalance + income + expenses;
+  document.getElementById('debtLeft').innerText = debtLeft;
+}
 
-    updateUI();
-  </script>
+// ---------------- INIT ----------------
+load();
+initMonths();
+render();
+
+</script>
+
 </body>
 </html>
