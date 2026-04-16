@@ -131,6 +131,10 @@ const firebaseConfig = {
   measurementId: "G-0N0XKJCS18"
 };
 firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+// 🔥 mantém o login salvo mesmo recarregando a página
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 const auth = firebase.auth();
   auth.getRedirectResult()
 .then((result) => {
